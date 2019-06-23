@@ -1,0 +1,191 @@
+//COMPONENTS
+class Pomodoro extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      time: 1500,
+      sessCount: 25,
+      brkCount: 5,
+      timerType: 'session',
+      pause: 'off',
+      timeColor: { color: '#8b0000' } };
+
+    this.timer = 0;
+    this.toggleStart = this.toggleStart.bind(this);
+    this.currentTime = this.currentTime.bind(this);
+    this.countDown = this.countDown.bind(this);
+    this.phaseControl = this.phaseControl.bind(this);
+    this.startCountDown = this.startCountDown.bind(this);
+    this.setBrkLength = this.setBrkLength.bind(this);
+    this.setSessLength = this.setSessLength.bind(this);
+    this.setCounter = this.setCounter.bind(this);
+    this.switchTimer = this.switchTimer.bind(this);
+    this.reset = this.reset.bind(this);
+    this.alarm = this.alarm.bind(this);
+  }
+
+  setBrkLength(e) {
+    this.setCounter('brkCount', e.target.value, this.state.brkCount, 'break');
+  }
+
+  setSessLength(e) {
+    this.setCounter('sessCount', e.target.value, this.state.sessCount, 'session');
+  }
+
+  setCounter(state, sign, count, type) {
+    if (this.state.pause === 'off') {
+      if (sign === '-' && count != 1) {
+        this.setState({ [state]: count - 1 });
+      } else if (sign === '+' && count != 60) {
+        this.setState({ [state]: count + 1 });
+      }
+      if (sign === '-' && count != 1 && this.state.timerType === type) {
+        this.setState({ time: count * 60 - 60 });
+      } else if (sign === '+' && count != 60 && this.state.timerType === type) {
+        this.setState({ time: count * 60 + 60 });
+      }
+    }
+  }
+
+  toggleStart() {
+    if (this.state.pause === 'off') {
+      this.startCountDown();
+      this.setState({ pause: 'on' });
+    } else {
+      this.setState({ pause: 'off' });
+      clearInterval(this.timer);
+    }
+  }
+
+  startCountDown() {
+    this.timer = setInterval(() => {
+      this.countDown();
+      this.phaseControl();
+    }, 1000);
+  }
+
+  countDown() {
+    let seconds = this.state.time - 1;
+    this.setState({ time: seconds });
+  }
+
+  phaseControl() {
+    let seconds = this.state.time;
+    let brkSeconds = this.state.brkCount * 60;
+    let sessSeconds = this.state.sessCount * 60;
+    this.alarm(seconds);
+    if (seconds < 0) {
+      if (this.state.timerType === 'session') {
+        clearInterval(this.timer);
+        this.startCountDown();
+        this.switchTimer(brkSeconds, 'break', '#00823a');
+      } else {
+        clearInterval(this.timer);
+        this.startCountDown();
+        this.switchTimer(sessSeconds, 'session', '#8b0000');
+      }
+    }
+  }
+
+  switchTimer(seconds, timerType, color) {
+    this.setState({
+      time: seconds,
+      timerType,
+      timeColor: { color } });
+
+  }
+
+  currentTime() {
+    let minutes = Math.floor(this.state.time / 60);
+    let seconds = this.state.time - minutes * 60;
+
+    if (minutes < 10) {minutes = "0" + minutes;}
+    if (seconds < 10) {seconds = "0" + seconds;}
+
+    return minutes + ':' + seconds;
+  }
+
+  alarm(time) {
+    if (time === 0) {
+      this.audioBeep.play();
+    }
+  }
+
+  reset() {
+    this.setState({
+      time: 1500,
+      sessCount: 25,
+      brkCount: 5,
+      timerType: 'session',
+      pause: 'off' });
+
+    clearInterval(this.timer);
+    this.audioBeep.pause();
+    this.audioBeep.currentTime = 0;
+  }
+
+  render() {
+    return (
+      React.createElement("div", null,
+      React.createElement("div", { className: "main-title" }, "Pomodoro Clock"),
+      React.createElement("div", { className: "pomodoro-clock" },
+      React.createElement("div", { className: "control-container" },
+      React.createElement(TimeLengthControl, {
+        className: "break-control", count: this.state.brkCount,
+        label: "break-label", inc: "break-increment",
+        length: "break-length", dec: "break-decrement",
+        title: "Break Length",
+        onClick: this.setBrkLength }),
+
+      React.createElement(TimeLengthControl, {
+        className: "session-control", count: this.state.sessCount,
+        label: "session-label", inc: "session-increment",
+        length: "session-length", dec: "session-decrement",
+        title: "Session Length",
+        onClick: this.setSessLength })),
+
+
+      React.createElement("div", { className: "timer-container" },
+      React.createElement("div", { id: "timer-label" },
+      this.state.timerType === 'session' ?
+      'Session' : 'Break'),
+
+      React.createElement("div", { id: "time-left", style: this.state.timeColor },
+      this.currentTime()),
+
+      React.createElement("button", { onClick: this.toggleStart, id: "start_stop",
+        className: "btn" }, "Start/Pause"),
+      React.createElement("button", { onClick: this.reset, id: "reset",
+        className: "btn" }, "Reset")),
+
+      React.createElement("audio", { id: "beep", src: "https://goo.gl/65cBl1",
+        ref: audio => {this.audioBeep = audio;} }))));
+
+
+
+  }}
+
+
+class TimeLengthControl extends React.Component {
+  render() {
+    return (
+      React.createElement("div", { className: this.props.className },
+      React.createElement("div", { id: this.props.label },
+      this.props.title,
+      React.createElement("div", { id: this.props.length }, this.props.count)),
+
+      React.createElement("button", { id: this.props.inc, value: "+", className: "btn btn-up",
+        onClick: this.props.onClick },
+      React.createElement("i", { className: "fa fa-angle-up fa-2x" })),
+
+      React.createElement("button", { id: this.props.dec, value: "-", className: "btn btn-down",
+        onClick: this.props.onClick },
+      React.createElement("i", { className: "fa fa-angle-down fa-2x" }))));
+
+
+
+  }}
+
+
+
+ReactDOM.render(React.createElement(Pomodoro, null), document.getElementById('root'));
